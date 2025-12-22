@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.pyc
+
+# Entorno virtual
+venv/
+
+# Base de datos
+*.db
+
+# Variables de entorno
+.env
+
+# Logs
+*.log
+
+# WSL / Linux
+.DS_Store
+
+
+*.deb

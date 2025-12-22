@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartStock | Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="bg-slate-50 min-h-screen">
+
+    <nav class="bg-slate-900 text-white shadow-md">
+        <div class="container mx-auto px-6 py-4 flex justify-between items-center">
+            <div class="flex items-center gap-2">
+                <i class="fas fa-chart-line text-blue-400 text-xl"></i>
+                <span class="font-bold text-lg tracking-wider">SMARTSTOCK</span>
+            </div>
+            <div class="flex gap-6 items-center">
+                <a href="dashboard.html" class="text-blue-400 border-b-2 border-blue-400 pb-1 font-medium">Dashboard</a>
+                <a href="/movimientos_page" class="text-gray-300 hover:text-white">
+                    <i class="fas fa-history mr-1"></i> Movimientos
+                </a>
+                <a href="/registro" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg text-sm transition-all shadow-lg shadow-blue-500/30">
+                    <i class="fas fa-plus mr-1"></i> Nuevo Ítem
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container mx-auto px-6 py-8">
+        <div class="flex justify-between items-end mb-8">
+            <div>
+                <h1 class="text-3xl font-extrabold text-slate-800">Panel de Control</h1>
+                <p class="text-slate-500 italic">Monitoreo de inventario RFID en tiempo real</p>
+            </div>
+            <div class="text-right">
+                <span id="update-timer" class="text-xs font-mono text-slate-400 italic text-right block">Actualizando en 5s...</span>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
+            <div class="bg-white p-6 rounded-2xl shadow-sm border-l-8 border-green-500">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-sm font-bold text-slate-400 uppercase tracking-wider">Disponibles</p>
+                        <h3 id="disponible" class="text-4xl font-black text-slate-800 mt-1">0</h3>
+                    </div>
+                    <div class="bg-green-50 p-3 rounded-xl">
+                        <i class="fas fa-boxes text-green-500 text-2xl"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-2xl shadow-sm border-l-8 border-blue-500">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-sm font-bold text-slate-400 uppercase tracking-wider">Prestados</p>
+                        <h3 id="prestado" class="text-4xl font-black text-slate-800 mt-1">0</h3>
+                    </div>
+                    <div class="bg-blue-50 p-3 rounded-xl">
+                        <i class="fas fa-hand-holding text-blue-500 text-2xl"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-2xl shadow-sm border-l-8 border-purple-500 hidden lg:block">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-sm font-bold text-slate-400 uppercase tracking-wider">Total en Sistema</p>
+                        <h3 id="total" class="text-4xl font-black text-slate-800 mt-1">0</h3>
+                    </div>
+                    <div class="bg-purple-50 p-3 rounded-xl">
+                        <i class="fas fa-database text-purple-500 text-2xl"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-100">
+            <div class="bg-slate-900 px-6 py-4 flex justify-between items-center">
+                <h2 class="text-white font-bold flex items-center gap-2">
+                    <i class="fas fa-history text-blue-400"></i> Últimos Movimientos
+                </h2>
+                <a href="movimientos.html" class="text-xs text-blue-300 hover:text-white underline uppercase tracking-widest font-bold">Ver todo</a>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-50 text-slate-500 text-[10px] uppercase font-bold tracking-widest border-b">
+                            <th>UID / Tag</th>
+                            <th>Producto / Categoría</th>
+                            <th>Detalles Técnicos</th> <th class="text-center">Estado</th>
+                            <th class="text-right">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabla-items" class="divide-y divide-slate-100">
+                        </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <script src="/frontend/dashboard/dashboard.js"></script>
+   <div id="modalEditar" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50">
+    <div class="bg-white p-8 rounded-3xl shadow-2xl w-full max-w-md border border-slate-100">
+        <div class="flex items-center gap-3 mb-6">
+            <div class="bg-blue-100 p-2 rounded-lg">
+                <i class="fas fa-edit text-blue-600"></i>
+            </div>
+            <h2 class="text-2xl font-bold text-slate-800">Editar Ítem</h2>
+        </div>
+
+        <input type="hidden" id="edit-uid">
+
+        <div class="space-y-5">
+            <div>
+                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 ml-1">Nombre del Ítem / Categoría</label>
+                <div class="relative">
+                    <i class="fas fa-tag absolute left-3 top-3 text-slate-400"></i>
+                    <input type="text" id="edit-categoria" 
+                        class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all text-slate-700" 
+                        placeholder="Ej. Laptop Dell">
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 ml-1">ID de Referencia</label>
+                <div class="relative">
+                    <i class="fas fa-fingerprint absolute left-3 top-3 text-slate-400"></i>
+                    <input type="text" id="edit-referencia" 
+                        class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all text-slate-700" 
+                        placeholder="ID-0000">
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 ml-1">Estado de Disponibilidad</label>
+                <div class="relative">
+                    <i class="fas fa-info-circle absolute left-3 top-3 text-slate-400"></i>
+                    <select id="edit-estado" 
+                        class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all text-slate-700 appearance-none">
+                        <option value="disponible">✅ Disponible</option>
+                        <option value="prestado">🔄 Prestado</option>
+                        <option value="mantenimiento">🛠️ Mantenimiento</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex justify-end gap-3 mt-8">
+            <button onclick="cerrarModal()" 
+                class="px-5 py-2.5 text-slate-500 font-semibold hover:bg-slate-100 rounded-xl transition-all">
+                Cancelar
+            </button>
+            <button onclick="guardarCambios()" 
+                class="px-6 py-2.5 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 shadow-lg shadow-blue-500/30 transition-all active:scale-95">
+                Guardar Cambios
+            </button>
+        </div>
+    </div>
+</div>
+</body>
+</html>
