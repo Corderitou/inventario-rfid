@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iniciar Sesión | SmartStock RFID</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .input-glow:focus {
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.3);
+        }
+
+        @keyframes float {
+
+            0%,
+            100% {
+                transform: translateY(0px);
+            }
+
+            50% {
+                transform: translateY(-20px);
+            }
+        }
+
+        .float-animation {
+            animation: float 6s ease-in-out infinite;
+        }
+
+        @keyframes pulse-slow {
+
+            0%,
+            100% {
+                opacity: 0.6;
+            }
+
+            50% {
+                opacity: 1;
+            }
+        }
+
+        .pulse-slow {
+            animation: pulse-slow 3s ease-in-out infinite;
+        }
+    </style>
+</head>
+
+<body class="gradient-bg min-h-screen flex items-center justify-center p-4 overflow-hidden relative">
+
+    <!-- Decorative elements -->
+    <div
+        class="absolute top-10 left-10 w-72 h-72 bg-purple-300 rounded-full mix-blend-multiply filter blur-xl opacity-20 float-animation">
+    </div>
+    <div class="absolute top-40 right-20 w-96 h-96 bg-yellow-300 rounded-full mix-blend-multiply filter blur-xl opacity-20 float-animation"
+        style="animation-delay: 2s;"></div>
+    <div class="absolute -bottom-20 left-40 w-80 h-80 bg-pink-300 rounded-full mix-blend-multiply filter blur-xl opacity-20 float-animation"
+        style="animation-delay: 4s;"></div>
+
+    <div class="w-full max-w-md relative z-10">
+        <!-- Logo and Title -->
+        <div class="text-center mb-8">
+            <div
+                class="inline-flex items-center justify-center w-20 h-20 bg-white/20 backdrop-blur-lg rounded-2xl mb-4 glass-effect">
+                <i class="fas fa-boxes-stacked text-4xl text-white"></i>
+            </div>
+            <h1 class="text-4xl font-extrabold text-white mb-2 tracking-tight">SmartStock RFID</h1>
+            <p class="text-purple-100 text-sm font-medium">Sistema de Gestión de Inventario</p>
+        </div>
+
+        <!-- Login Card -->
+        <div class="glass-effect rounded-3xl p-8 shadow-2xl">
+            <h2 class="text-2xl font-bold text-white mb-6">Iniciar Sesión</h2>
+
+            <form id="loginForm" class="space-y-5">
+                <!-- Email Input -->
+                <div>
+                    <label class="block text-white/90 text-sm font-semibold mb-2">
+                        <i class="fas fa-user mr-2"></i>Usuario o Email
+                    </label>
+                    <div class="relative">
+                        <input type="text" id="username" placeholder="admin@smartstock.com"
+                            class="w-full bg-white/10 text-white placeholder-white/50 border border-white/20 rounded-xl px-4 py-3 outline-none input-glow transition-all focus:bg-white/20"
+                            required>
+                    </div>
+                </div>
+
+                <!-- Password Input -->
+                <div>
+                    <label class="block text-white/90 text-sm font-semibold mb-2">
+                        <i class="fas fa-lock mr-2"></i>Contraseña
+                    </label>
+                    <div class="relative">
+                        <input type="password" id="password" placeholder="••••••••"
+                            class="w-full bg-white/10 text-white placeholder-white/50 border border-white/20 rounded-xl px-4 py-3 outline-none input-glow transition-all focus:bg-white/20"
+                            required>
+                        <button type="button" onclick="togglePassword()"
+                            class="absolute right-3 top-3.5 text-white/60 hover:text-white transition-colors">
+                            <i id="eyeIcon" class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Remember me & Forgot password -->
+                <div class="flex items-center justify-between text-sm">
+                    <label class="flex items-center text-white/80 cursor-pointer hover:text-white transition-colors">
+                        <input type="checkbox" class="mr-2 w-4 h-4 rounded">
+                        Recordarme
+                    </label>
+                    <a href="#" class="text-white/80 hover:text-white transition-colors font-medium">
+                        ¿Olvidaste tu contraseña?
+                    </a>
+                </div>
+
+                <!-- Submit Button -->
+                <button type="submit"
+                    class="w-full bg-white text-purple-700 font-bold py-3.5 rounded-xl hover:bg-purple-50 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-[1.02] active:scale-95">
+                    <i class="fas fa-sign-in-alt mr-2"></i>Iniciar Sesión
+                </button>
+            </form>
+
+            <!-- Divider -->
+            <div class="flex items-center my-6">
+                <div class="flex-1 border-t border-white/20"></div>
+                <span class="px-4 text-white/60 text-xs font-medium">O continúa con</span>
+                <div class="flex-1 border-t border-white/20"></div>
+            </div>
+
+            <!-- Social Login -->
+            <div class="grid grid-cols-2 gap-3">
+                <button
+                    class="flex items-center justify-center bg-white/10 hover:bg-white/20 text-white py-2.5 rounded-xl transition-all border border-white/20">
+                    <i class="fab fa-google mr-2"></i>Google
+                </button>
+                <button
+                    class="flex items-center justify-center bg-white/10 hover:bg-white/20 text-white py-2.5 rounded-xl transition-all border border-white/20">
+                    <i class="fab fa-microsoft mr-2"></i>Microsoft
+                </button>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <p class="text-center text-white/70 text-sm mt-6">
+            ¿No tienes una cuenta?
+            <a href="#" class="text-white font-semibold hover:underline">Solicitar acceso</a>
+        </p>
+
+        <div class="text-center mt-8 text-white/50 text-xs">
+            <p class="pulse-slow">🔒 Conexión segura y cifrada</p>
+        </div>
+    </div>
+
+    <script>
+        // Toggle password visibility
+        function togglePassword() {
+            const passwordInput = document.getElementById('password');
+            const eyeIcon = document.getElementById('eyeIcon');
+
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                eyeIcon.classList.remove('fa-eye');
+                eyeIcon.classList.add('fa-eye-slash');
+            } else {
+                passwordInput.type = 'password';
+                eyeIcon.classList.remove('fa-eye-slash');
+                eyeIcon.classList.add('fa-eye');
+            }
+        }
+
+        // Form submission (placeholder - no backend)
+        document.getElementById('loginForm').addEventListener('submit', function (e) {
+            e.preventDefault();
+
+            // Simulate login animation
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+            const originalText = submitBtn.innerHTML;
+
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Iniciando sesión...';
+            submitBtn.disabled = true;
+
+            // Simulate delay and redirect to dashboard
+            setTimeout(() => {
+                window.location.href = '/dashboard';
+            }, 1500);
+        });
+    </script>
+</body>
+
+</html>

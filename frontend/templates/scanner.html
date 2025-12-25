@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Escáner RFID | SmartStock</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+
+<body class="bg-gray-50 min-h-screen font-sans">
+    <nav class="bg-slate-900 text-white shadow-md mb-8">
+        <div class="container mx-auto px-6 py-4 flex justify-between items-center">
+            <div class="flex items-center gap-2">
+                <i class="fas fa-boxes-stacked text-blue-400 text-xl"></i>
+                <span class="font-bold text-lg tracking-wider">SMARTSTOCK RFID</span>
+            </div>
+            <div class="flex gap-6 items-center">
+                <a href="/dashboard" class="text-gray-300 hover:text-white transition-colors font-medium">
+                    <i class="fas fa-chart-pie mr-1"></i> Dashboard
+                </a>
+                <a href="/items_page" class="text-gray-300 hover:text-white transition-colors font-medium">
+                    <i class="fas fa-box mr-1"></i> Inventario
+                </a>
+                <span class="text-blue-400 border-b-2 border-blue-400 pb-1 font-medium">
+                    <i class="fas fa-barcode mr-1"></i> Escáner
+                </span>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mx-auto px-4 py-8 max-w-2xl">
+        <div class="text-center mb-8">
+            <div class="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-4">
+                <i class="fas fa-barcode text-3xl text-blue-600"></i>
+            </div>
+            <h1 class="text-2xl font-bold text-gray-800 mb-2">Escáner RFID</h1>
+            <p class="text-gray-500">Escanea o ingresa el UID del tag</p>
+        </div>
+
+        <!-- Input Principal -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+            <input type="text" id="rfidInput" placeholder="Escanea el UID aquí..."
+                class="w-full px-4 py-3 text-lg font-mono border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
+                autofocus>
+            <button onclick="procesarEscaneo()"
+                class="w-full mt-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg transition-all">
+                Procesar
+            </button>
+        </div>
+
+        <!-- Últimos Escaneos -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <h2 class="text-sm font-bold text-gray-500 uppercase mb-4">Últimos Escaneos</h2>
+            <div id="recentScans" class="space-y-2">
+                <p class="text-gray-400 text-sm italic">No hay escaneos recientes</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let recentScans = [];
+
+        // Auto-submit con Enter
+        document.getElementById('rfidInput').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                procesarEscaneo();
+            }
+        });
+
+        async function procesarEscaneo() {
+            const input = document.getElementById('rfidInput');
+            const uid = input.value.trim().toUpperCase();
+
+            if (!uid) {
+                Swal.fire('Error', 'Ingresa un UID válido', 'error');
+                return;
+            }
+
+            try {
+                // Verificar si existe
+                const response = await fetch('/inventario/items');
+                const items = await response.json();
+                const itemExistente = items.find(item => item.uid === uid);
+
+                if (itemExistente) {
+                    // Ya existe - cambiar estado
+                    mostrarModalEstado(itemExistente);
+                    agregarEscaneo(uid, 'Existente');
+                } else {
+                    // Nuevo - registrar
+                    mostrarModalRegistro(uid);
+                    agregarEscaneo(uid, 'Nuevo');
+                }
+            } catch (error) {
+                Swal.fire('Error', 'Error al consultar el servidor', 'error');
+            }
+
+            input.value = '';
+            input.focus();
+        }
+
+        async function mostrarModalRegistro(uid) {
+            const catalogoResp = await fetch('/catalogo');
+            const catalogo = await catalogoResp.json();
+
+            const options = catalogo.map(item =>
+                `<option value="${item.codigo}">${item.nombre}</option>`
+            ).join('');
+
+            const { value: codigo } = await Swal.fire({
+                title: 'Nuevo Tag',
+                html: `
+                    <div class="text-left">
+                        <p class="text-sm text-gray-600 mb-4">UID: <strong>${uid}</strong></p>
+                        <label class="block text-sm font-semibold mb-2">Producto:</label>
+                        <select id="swal-prod" class="swal2-input w-full">
+                            <option value="">Selecciona...</option>
+                            ${options}
+                        </select>
+                    </div>
+                `,
+                showCancelButton: true,
+                confirmButtonText: 'Registrar',
+                preConfirm: () => {
+                    const val = document.getElementById('swal-prod').value;
+                    if (!val) {
+                        Swal.showValidationMessage('Selecciona un producto');
+                        return false;
+                    }
+                    return val;
+                }
+            });
+
+            if (codigo) {
+                const resp = await fetch('/items', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ uid, codigo_referencia: codigo })
+                });
+
+                if (resp.ok) {
+                    Swal.fire('Registrado', 'Ítem creado exitosamente', 'success');
+                }
+            }
+        }
+
+        async function mostrarModalEstado(item) {
+            const { value: estado } = await Swal.fire({
+                title: 'Cambiar Estado',
+                html: `
+                    <div class="text-left">
+                        <p class="text-sm text-gray-600 mb-1">UID: <strong>${item.uid}</strong></p>
+                        <p class="text-sm text-gray-600 mb-4">Producto: <strong>${item.nombre || 'Sin nombre'}</strong></p>
+                        <label class="block text-sm font-semibold mb-2">Nuevo estado:</label>
+                        <select id="swal-estado" class="swal2-input w-full">
+                            <option value="disponible" ${item.estado === 'disponible' ? 'selected' : ''}>Disponible</option>
+                            <option value="prestado" ${item.estado === 'prestado' ? 'selected' : ''}>Prestado</option>
+                            <option value="mantenimiento" ${item.estado === 'mantenimiento' ? 'selected' : ''}>Mantenimiento</option>
+                        </select>
+                    </div>
+                `,
+                showCancelButton: true,
+                confirmButtonText: 'Actualizar',
+                preConfirm: () => document.getElementById('swal-estado').value
+            });
+
+            if (estado) {
+                const resp = await fetch(`/items/${item.uid}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ estado })
+                });
+
+                if (resp.ok) {
+                    Swal.fire('Actualizado', 'Estado cambiado correctamente', 'success');
+                }
+            }
+        }
+
+        function agregarEscaneo(uid, tipo) {
+            recentScans.unshift({ uid, tipo, time: new Date().toLocaleTimeString() });
+            if (recentScans.length > 5) recentScans.pop();
+
+            const html = recentScans.map(s => `
+                <div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                    <div>
+                        <p class="font-mono font-semibold text-sm">${s.uid}</p>
+                        <p class="text-xs text-gray-500">${s.time}</p>
+                    </div>
+                    <span class="text-xs font-semibold px-2 py-1 rounded ${s.tipo === 'Nuevo' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'
+                }">${s.tipo}</span>
+                </div>
+            `).join('');
+
+            document.getElementById('recentScans').innerHTML = html;
+        }
+    </script>
+</body>
+
+</html>

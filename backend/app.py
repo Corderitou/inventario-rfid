@@ -1,6 +1,8 @@
 from flask import Flask, jsonify, request, render_template
-from db import get_db_connection
+from db import get_collection
+from config import COLLECTION_ITEMS, COLLECTION_ITEMS_RFID, COLLECTION_MOVIMIENTOS
 from flask_cors import CORS
+from datetime import datetime
 import os
 
 
@@ -16,7 +18,12 @@ CORS(app)
 
 @app.route("/")
 def index():
-    # Esto busca el archivo en la carpeta /templates/
+    # Login landing page
+    return render_template("index.html")
+
+@app.route("/dashboard")
+def dashboard():
+    # Dashboard page
     return render_template("dashboard.html")
 
 @app.route("/registro")
@@ -29,6 +36,14 @@ def registro_page():
 def movimientos_page():
     return render_template("movimientos.html")
 
+@app.route("/items_page")
+def items_page():
+    return render_template("items.html")
+
+@app.route("/scanner")
+def scanner_page():
+    return render_template("scanner.html")
+
 @app.route("/rfid", methods=["POST"])
 def rfid():
     data = request.json
@@ -40,39 +55,34 @@ def rfid():
     if not uid or not accion:
         return jsonify({"error": "Faltan datos"}), 400
 
-    conn = get_db_connection()
-    cursor = conn.cursor()
+    items_rfid_collection = get_collection(COLLECTION_ITEMS_RFID)
+    movimientos_collection = get_collection(COLLECTION_MOVIMIENTOS)
 
-    cursor.execute(
-        "SELECT * FROM items_rfid WHERE uid_rfid = ?", (uid,)
-    )
-    item = cursor.fetchone()
+    # Buscar el ítem por UID
+    item = items_rfid_collection.find_one({"uid_rfid": uid})
 
     # Determinar estado según acción
     estado_actual = "disponible" if accion == "entrada" else "prestado"
 
     if item is None:
         # RFID nuevo
-        cursor.execute("""
-            INSERT INTO items_rfid (uid_rfid, estado)
-            VALUES (?, ?)
-        """, (uid, estado_actual))
+        items_rfid_collection.insert_one({
+            "uid_rfid": uid,
+            "estado": estado_actual
+        })
     else:
         # RFID existente
-        cursor.execute("""
-            UPDATE items_rfid
-            SET estado = ?
-            WHERE uid_rfid = ?
-        """, (estado_actual, uid))
+        items_rfid_collection.update_one(
+            {"uid_rfid": uid},
+            {"$set": {"estado": estado_actual}}
+        )
 
     # Registrar SIEMPRE el movimiento
-    cursor.execute("""
-        INSERT INTO movimientos (uid_rfid, accion)
-        VALUES (?, ?)
-    """, (uid, accion))
-
-    conn.commit()
-    conn.close()
+    movimientos_collection.insert_one({
+        "uid_rfid": uid,
+        "accion": accion,
+        "fecha": datetime.utcnow()
+    })
 
     return jsonify({
         "uid": uid,
@@ -82,99 +92,102 @@ def rfid():
 
 @app.route("/items", methods=["GET"])
 def get_items():
-    conn = get_db_connection()
-    cursor = conn.cursor()
-
-    cursor.execute("SELECT * FROM items_rfid")
-    items = cursor.fetchall()
-    conn.close()
-
-    items_list = [dict(item) for item in items]
-
-    return jsonify(items_list)
+    items_rfid_collection = get_collection(COLLECTION_ITEMS_RFID)
+    
+    items = list(items_rfid_collection.find({}, {"_id": 0}))
+    
+    return jsonify(items)
 
 @app.route("/movimientos", methods=["GET"])
 def get_movimientos():
     uid = request.args.get("uid")
     accion = request.args.get("accion")
-    conn = get_db_connection()
-    cursor = conn.cursor()
+    
+    movimientos_collection = get_collection(COLLECTION_MOVIMIENTOS)
 
     acciones_validas = ["entrada", "salida"]
-    query = """
-        SELECT uid_rfid, accion, fecha
-        FROM movimientos
-        WHERE 1=1
-    """
-    params = []
+    filtro = {}
 
     if uid:
-        query += " AND uid_rfid = ?"
-        params.append(uid)
+        filtro["uid_rfid"] = uid
 
     if accion:
         if accion not in acciones_validas:
             return jsonify({
                 "error": "Acción inválida. Use 'entrada' o 'salida'"
             }), 400
-        query += " AND accion = ?"
-        params.append(accion)
+        filtro["accion"] = accion
 
-    query += " ORDER BY fecha DESC"
-
-    cursor.execute(query, params)
-    rows = cursor.fetchall()
-    conn.close()
+    # Buscar con filtro y ordenar por fecha descendente
+    movimientos_cursor = movimientos_collection.find(
+        filtro, 
+        {"_id": 0}
+    ).sort("fecha", -1)
 
     movimientos = []
-    for row in rows:
+    for mov in movimientos_cursor:
         movimientos.append({
-            "uid": row["uid_rfid"],
-            "accion": row["accion"],
-            "fecha": row["fecha"]
+            "uid": mov["uid_rfid"],
+            "accion": mov["accion"],
+            "fecha": mov["fecha"].isoformat() if isinstance(mov["fecha"], datetime) else str(mov["fecha"])
         })
 
     return jsonify(movimientos), 200
 
 @app.route("/inventario/items", methods=["GET"])
 def inventario_items():
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    query = """
-        SELECT r.uid_rfid, i.nombre, i.categoria, i.especificaciones, r.estado 
-        FROM items_rfid r
-        LEFT JOIN items i ON r.id_referencia_codigo = i.codigo
-    """
-    cursor.execute(query)
-    rows = cursor.fetchall()
-    conn.close()
-
-    items = []
-    for row in rows:
-        items.append({
-            "uid": row["uid_rfid"],
-            "nombre": row["nombre"] if row["nombre"] else "Sin registrar",
-            "categoria": row["categoria"],
-            "especificaciones": row["especificaciones"],
-            "estado": row["estado"]
-        })
+    items_rfid_collection = get_collection(COLLECTION_ITEMS_RFID)
+    
+    # Usar agregación con $lookup para simular JOIN
+    pipeline = [
+        {
+            "$lookup": {
+                "from": COLLECTION_ITEMS,
+                "localField": "id_referencia_codigo",
+                "foreignField": "codigo",
+                "as": "item_info"
+            }
+        },
+        {
+            "$unwind": {
+                "path": "$item_info",
+                "preserveNullAndEmptyArrays": True
+            }
+        },
+        {
+            "$project": {
+                "_id": 0,
+                "uid": "$uid_rfid",
+                "nombre": {"$ifNull": ["$item_info.nombre", "Sin registrar"]},
+                "categoria": "$item_info.categoria",
+                "especificaciones": "$item_info.especificaciones",
+                "estado": "$estado"
+            }
+        }
+    ]
+    
+    items = list(items_rfid_collection.aggregate(pipeline))
     return jsonify(items), 200
 
 
 @app.route("/inventario/resumen", methods=["GET"])
 def inventario_resumen():
-    conn = get_db_connection()
-    cursor = conn.cursor()
+    items_rfid_collection = get_collection(COLLECTION_ITEMS_RFID)
 
-    cursor.execute("""
-        SELECT estado, COUNT(*) as cantidad
-        FROM items_rfid
-        GROUP BY estado
-    """)
-    rows = cursor.fetchall()
-    conn.close()
-
-    inventario = {row["estado"]: row["cantidad"] for row in rows}
+    # Usar agregación para contar por estado
+    pipeline = [
+        {
+            "$group": {
+                "_id": "$estado",
+                "cantidad": {"$sum": 1}
+            }
+        }
+    ]
+    
+    resultado = list(items_rfid_collection.aggregate(pipeline))
+    
+    # Convertir a formato {estado: cantidad}
+    inventario = {item["_id"]: item["cantidad"] for item in resultado}
 
     return jsonify(inventario), 200
 
@@ -188,45 +201,51 @@ def crear_item():
     if not uid or not codigo_ref:
         return jsonify({"error": "Faltan datos (UID o Código de Referencia)"}), 400
 
-    conn = get_db_connection()
-    cursor = conn.cursor()
+    items_collection = get_collection(COLLECTION_ITEMS)
+    items_rfid_collection = get_collection(COLLECTION_ITEMS_RFID)
+    movimientos_collection = get_collection(COLLECTION_MOVIMIENTOS)
 
     try:
+        # Verificar que el código de referencia existe en el catálogo
+        if not items_collection.find_one({"codigo": codigo_ref}):
+            return jsonify({"error": f"El código {codigo_ref} no existe en el catálogo"}), 400
+
         # 1. Insertar el ítem físico vinculado al catálogo
-        cursor.execute("""
-            INSERT INTO items_rfid (uid_rfid, id_referencia_codigo, estado)
-            VALUES (?, ?, ?)
-        """, (uid, codigo_ref, "disponible"))
+        items_rfid_collection.insert_one({
+            "uid_rfid": uid,
+            "id_referencia_codigo": codigo_ref,
+            "estado": "disponible"
+        })
 
         # 2. Registrar el movimiento inicial
-        cursor.execute("""
-            INSERT INTO movimientos (uid_rfid, accion)
-            VALUES (?, ?)
-        """, (uid, "entrada"))
+        movimientos_collection.insert_one({
+            "uid_rfid": uid,
+            "accion": "entrada",
+            "fecha": datetime.utcnow()
+        })
 
-        conn.commit()
         return jsonify({"Mensaje": f"Item {uid} creado exitosamente vinculado a {codigo_ref}"}), 201
     except Exception as e:
-        conn.rollback()
         return jsonify({"error": str(e)}), 400
-    finally:
-        conn.close()
 
 @app.route("/items/<uid>", methods=["DELETE"])
 def eliminar_item(uid):
-    conn = get_db_connection()
-    cursor = conn.cursor()
+    items_rfid_collection = get_collection(COLLECTION_ITEMS_RFID)
+    movimientos_collection = get_collection(COLLECTION_MOVIMIENTOS)
+    
     try:
         # Primero eliminamos sus movimientos (por integridad de base de datos)
-        cursor.execute("DELETE FROM movimientos WHERE uid_rfid = ?", (uid,))
+        movimientos_collection.delete_many({"uid_rfid": uid})
+        
         # Luego eliminamos el ítem
-        cursor.execute("DELETE FROM items_rfid WHERE uid_rfid = ?", (uid,))
-        conn.commit()
+        result = items_rfid_collection.delete_one({"uid_rfid": uid})
+        
+        if result.deleted_count == 0:
+            return jsonify({"error": "No se encontró el ítem"}), 404
+            
         return jsonify({"mensaje": "Item eliminado correctamente"}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-    finally:
-        conn.close()
 
 
 @app.route("/items/<uid>", methods=["PUT"])
@@ -236,36 +255,40 @@ def editar_item(uid):
     nuevo_codigo_ref = data.get('codigo_referencia')
     nuevo_estado = data.get('estado')
 
-    conn = get_db_connection()
-    cursor = conn.cursor()
+    items_rfid_collection = get_collection(COLLECTION_ITEMS_RFID)
 
     try:
-        cursor.execute("""
-            UPDATE items_rfid 
-            SET id_referencia_codigo = ?, estado = ?
-            WHERE uid_rfid = ?
-        """, (nuevo_codigo_ref, nuevo_estado, uid))
+        update_fields = {}
+        if nuevo_codigo_ref:
+            update_fields["id_referencia_codigo"] = nuevo_codigo_ref
+        if nuevo_estado:
+            update_fields["estado"] = nuevo_estado
+            
+        if not update_fields:
+            return jsonify({"error": "No hay campos para actualizar"}), 400
         
-        conn.commit()
-        if cursor.rowcount == 0:
+        result = items_rfid_collection.update_one(
+            {"uid_rfid": uid},
+            {"$set": update_fields}
+        )
+        
+        if result.matched_count == 0:
             return jsonify({"error": "No se encontró el ítem"}), 404
             
         return jsonify({"mensaje": "Cambios guardados correctamente"}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 400
-    finally:
-        conn.close()
 
 @app.route("/catalogo", methods=["GET"])
 def get_catalogo():
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute("SELECT codigo, nombre, categoria FROM items")
-        rows = cursor.fetchall()
-        conn.close()
-        
-        catalogo = [dict(row) for row in rows]
-        return jsonify(catalogo), 200       
+    items_collection = get_collection(COLLECTION_ITEMS)
+    
+    catalogo = list(items_collection.find(
+        {},
+        {"_id": 0, "codigo": 1, "nombre": 1, "categoria": 1}
+    ))
+    
+    return jsonify(catalogo), 200       
 
 if __name__ == "__main__":
     app.run(debug=True)

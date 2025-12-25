@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,30 +8,38 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 </head>
+
 <body class="bg-gray-50 min-h-screen font-sans">
     <nav class="bg-slate-900 text-white shadow-md mb-8">
-    <div class="container mx-auto px-6 py-4 flex justify-between items-center">
-        <div class="flex items-center gap-2">
-            <i class="fas fa-boxes-stacked text-blue-400 text-xl"></i>
-            <span class="font-bold text-lg tracking-wider text-white">SMARTSTOCK</span>
+        <div class="container mx-auto px-6 py-4 flex justify-between items-center">
+            <div class="flex items-center gap-2">
+                <i class="fas fa-boxes-stacked text-blue-400 text-xl"></i>
+                <span class="font-bold text-lg tracking-wider text-white">SMARTSTOCK RFID</span>
+            </div>
+            <div class="flex gap-6 items-center">
+                <a href="/dashboard" class="text-gray-300 hover:text-white transition-colors font-medium">
+                    <i class="fas fa-chart-pie mr-1"></i> Dashboard
+                </a>
+                <a href="/items_page" class="text-gray-300 hover:text-white transition-colors font-medium">
+                    <i class="fas fa-box mr-1"></i> Inventario
+                </a>
+                <span class="text-blue-400 border-b-2 border-blue-400 pb-1 font-medium">
+                    <i class="fas fa-history mr-1"></i> Movimientos
+                </span>
+                <a href="/scanner"
+                    class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg text-sm transition-all shadow-lg shadow-blue-500/30">
+                    <i class="fas fa-barcode mr-1"></i> Escáner RFID
+                </a>
+            </div>
         </div>
-        <div class="flex gap-6 items-center">
-            <a href="/" class="text-gray-300 hover:text-white transition-colors font-medium">
-                <i class="fas fa-chart-pie mr-1"></i> Dashboard
-            </a>
-            <span class="text-blue-400 border-b-2 border-blue-400 pb-1 font-medium">
-                Movimientos
-            </span>
-        </div>
-    </div>
-</nav>
+    </nav>
     <div class="container mx-auto p-4 lg:p-8">
-        <div class="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
+        <div class="flex flex-col md:flex-row md::items-center justify-between mb-8 gap-4">
             <div>
                 <h1 class="text-2xl font-bold text-slate-800">Historial de Movimientos</h1>
                 <p class="text-gray-500 text-sm">Registro de entradas y salidas de bodega</p>
             </div>
-            <a href="/" class="text-blue-600 hover:text-blue-800 text-sm font-medium flex items-center gap-2">
+            <a href="/dashboard" class="text-blue-600 hover:text-blue-800 text-sm font-medium flex items-center gap-2">
                 <i class="fas fa-arrow-left"></i> Volver al Dashboard
             </a>
         </div>
@@ -41,21 +50,23 @@
                     <label class="block text-xs font-bold text-gray-400 uppercase mb-2">Filtrar por UID</label>
                     <div class="relative">
                         <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
-                        <input type="text" id="uid" placeholder="Ej: A1B2C3D4" 
+                        <input type="text" id="uid" placeholder="Ej: A1B2C3D4"
                             class="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all">
                     </div>
                 </div>
-                
+
                 <div>
                     <label class="block text-xs font-bold text-gray-400 uppercase mb-2">Acción</label>
-                    <select id="accion" class="w-full p-2 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none">
+                    <select id="accion"
+                        class="w-full p-2 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none">
                         <option value="">Todas las acciones</option>
                         <option value="entrada">Entrada</option>
                         <option value="salida">Salida</option>
                     </select>
                 </div>
 
-                <button id="buscar" class="bg-slate-800 hover:bg-slate-900 text-white font-bold py-2.5 px-6 rounded-xl transition-all flex items-center justify-center gap-2">
+                <button id="buscar"
+                    class="bg-slate-800 hover:bg-slate-900 text-white font-bold py-2.5 px-6 rounded-xl transition-all flex items-center justify-center gap-2">
                     <i class="fas fa-filter"></i> Aplicar Filtros
                 </button>
             </div>
@@ -67,15 +78,16 @@
                     <thead class="bg-slate-50 border-b border-gray-100">
                         <tr>
                             <th class="px-6 py-4 text-xs font-bold text-gray-500 uppercase">UID RFID</th>
-                            <th class="px-6 py-4 text-xs font-bold text-gray-500 uppercase text-center">Tipo de Acción</th>
+                            <th class="px-6 py-4 text-xs font-bold text-gray-500 uppercase text-center">Tipo de Acción
+                            </th>
                             <th class="px-6 py-4 text-xs font-bold text-gray-500 uppercase">Fecha y Hora</th>
                         </tr>
                     </thead>
                     <tbody id="tabla-movimientos" class="divide-y divide-gray-50">
-                        </tbody>
+                    </tbody>
                 </table>
             </div>
-            
+
             <div id="vacio" class="hidden p-12 text-center">
                 <i class="fas fa-history text-4xl text-gray-200 mb-4"></i>
                 <p class="text-gray-400">No se encontraron movimientos con esos filtros</p>
@@ -85,4 +97,5 @@
 
     <script src="/frontend/movimientos.js"></script>
 </body>
+
 </html>

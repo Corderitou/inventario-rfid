@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inventario | SmartStock RFID</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+
+<body class="bg-gray-50 min-h-screen font-sans">
+    <nav class="bg-slate-900 text-white shadow-md mb-8">
+        <div class="container mx-auto px-6 py-4 flex justify-between items-center">
+            <div class="flex items-center gap-2">
+                <i class="fas fa-boxes-stacked text-blue-400 text-xl"></i>
+                <span class="font-bold text-lg tracking-wider text-white">SMARTSTOCK RFID</span>
+            </div>
+            <div class="flex gap-6 items-center">
+                <a href="/dashboard" class="text-gray-300 hover:text-white transition-colors font-medium">
+                    <i class="fas fa-chart-pie mr-1"></i> Dashboard
+                </a>
+                <span class="text-blue-400 border-b-2 border-blue-400 pb-1 font-medium">
+                    <i class="fas fa-box mr-1"></i> Inventario
+                </span>
+                <a href="/movimientos_page" class="text-gray-300 hover:text-white transition-colors font-medium">
+                    <i class="fas fa-history mr-1"></i> Movimientos
+                </a>
+                <a href="/scanner"
+                    class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg text-sm transition-all shadow-lg shadow-blue-500/30">
+                    <i class="fas fa-barcode mr-1"></i> Escáner RFID
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mx-auto p-4 lg:p-8">
+        <div class="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
+            <div>
+                <h1 class="text-3xl font-bold text-slate-800">Inventario Completo</h1>
+                <p class="text-gray-500 text-sm">Todos los ítems registrados en el sistema RFID</p>
+            </div>
+            <div class="flex gap-3">
+                <button onclick="actualizarInventario()"
+                    class="bg-slate-800 hover:bg-slate-900 text-white font-bold py-2.5 px-5 rounded-xl transition-all flex items-center gap-2">
+                    <i class="fas fa-sync-alt"></i> Actualizar
+                </button>
+                <a href="/registro"
+                    class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-5 rounded-xl transition-all flex items-center gap-2 shadow-lg shadow-blue-500/30">
+                    <i class="fas fa-plus"></i> Nuevo Ítem
+                </a>
+            </div>
+        </div>
+
+        <!-- Filtros -->
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 mb-8">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div>
+                    <label class="block text-xs font-bold text-gray-400 uppercase mb-2">Buscar por UID</label>
+                    <input type="text" id="filtroUID" placeholder="A1B2C3D4"
+                        class="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-400 uppercase mb-2">Categoría</label>
+                    <select id="filtroCategoria"
+                        class="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none">
+                        <option value="">Todas las categorías</option>
+                        <option value="Cables">Cables</option>
+                        <option value="Estructuras">Estructuras</option>
+                        <option value="Herramientas">Herramientas</option>
+                        <option value="Bolas de Espejo">Bolas de Espejo</option>
+                        <option value="Accesorios">Accesorios</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-400 uppercase mb-2">Estado</label>
+                    <select id="filtroEstado"
+                        class="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none">
+                        <option value="">Todos los estados</option>
+                        <option value="disponible">Disponible</option>
+                        <option value="prestado">Prestado</option>
+                        <option value="mantenimiento">Mantenimiento</option>
+                    </select>
+                </div>
+
+                <div class="flex items-end">
+                    <button onclick="aplicarFiltros()"
+                        class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-4 rounded-xl transition-all">
+                        <i class="fas fa-filter mr-2"></i>Filtrar
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabla de Items -->
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left">
+                    <thead class="bg-slate-50 border-b border-gray-100">
+                        <tr>
+                            <th class="px-6 py-4 text-xs font-bold text-gray-500 uppercase">UID RFID</th>
+                            <th class="px-6 py-4 text-xs font-bold text-gray-500 uppercase">Producto</th>
+                            <th class="px-6 py-4 text-xs font-bold text-gray-500 uppercase">Categoría</th>
+                            <th class="px-6 py-4 text-xs font-bold text-gray-500 uppercase">Especificaciones</th>
+                            <th class="px-6 py-4 text-xs font-bold text-gray-500 uppercase text-center">Estado</th>
+                            <th class="px-6 py-4 text-xs font-bold text-gray-500 uppercase text-right">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabla-items" class="divide-y divide-gray-50">
+                        <!-- Items se cargarán aquí dinámicamente -->
+                    </tbody>
+                </table>
+            </div>
+
+            <div id="sin-resultados" class="hidden p-12 text-center">
+                <i class="fas fa-box-open text-5xl text-gray-200 mb-4"></i>
+                <p class="text-gray-400 text-lg">No se encontraron ítems</p>
+            </div>
+
+            <div id="cargando" class="p-12 text-center">
+                <i class="fas fa-spinner fa-spin text-4xl text-blue-500 mb-4"></i>
+                <p class="text-gray-500">Cargando inventario...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let todosLosItems = [];
+
+        // Cargar inventario al cargar la página
+        document.addEventListener('DOMContentLoaded', function () {
+            cargarInventario();
+        });
+
+        async function cargarInventario() {
+            document.getElementById('cargando').classList.remove('hidden');
+            document.getElementById('sin-resultados').classList.add('hidden');
+
+            try {
+                const response = await fetch('/inventario/items');
+                const items = await response.json();
+                todosLosItems = items;
+                mostrarItems(items);
+            } catch (error) {
+                console.error('Error al cargar inventario:', error);
+                Swal.fire('Error', 'No se pudo cargar el inventario', 'error');
+            } finally {
+                document.getElementById('cargando').classList.add('hidden');
+            }
+        }
+
+        function mostrarItems(items) {
+            const tbody = document.getElementById('tabla-items');
+            tbody.innerHTML = '';
+
+            if (items.length === 0) {
+                document.getElementById('sin-resultados').classList.remove('hidden');
+                return;
+            }
+
+            document.getElementById('sin-resultados').classList.add('hidden');
+
+            items.forEach(item => {
+                const estadoBadge = getEstadoBadge(item.estado);
+                const row = `
+                    <tr class="hover:bg-blue-50 transition-colors">
+                        <td class="px-6 py-4 font-mono text-blue-600 font-semibold">${item.uid || 'N/A'}</td>
+                        <td class="px-6 py-4 font-medium text-gray-800">${item.nombre || 'Sin registrar'}</td>
+                        <td class="px-6 py-4">
+                            <span class="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-semibold">
+                                ${item.categoria || 'Sin categoría'}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 text-gray-600 text-sm">${item.especificaciones || '-'}</td>
+                        <td class="px-6 py-4 text-center">${estadoBadge}</td>
+                        <td class="px-6 py-4 text-right">
+                            <button onclick="editarItem('${item.uid}')" class="text-blue-600 hover:text-blue-800 mr-3" title="Editar">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button onclick="eliminarItem('${item.uid}')" class="text-red-600 hover:text-red-800" title="Eliminar">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+                tbody.innerHTML += row;
+            });
+        }
+
+        function getEstadoBadge(estado) {
+            const badges = {
+                'disponible': '<span class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold">✓ Disponible</span>',
+                'prestado': '<span class="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold">⟳ Prestado</span>',
+                'mantenimiento': '<span class="px-3 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-semibold">⚙ Mantenimiento</span>'
+            };
+            return badges[estado] || '<span class="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-xs font-semibold">? Desconocido</span>';
+        }
+
+        function aplicarFiltros() {
+            const filtroUID = document.getElementById('filtroUID').value.toLowerCase();
+            const filtroCategoria = document.getElementById('filtroCategoria').value;
+            const filtroEstado = document.getElementById('filtroEstado').value;
+
+            const itemsFiltrados = todosLosItems.filter(item => {
+                const matchUID = !filtroUID || (item.uid && item.uid.toLowerCase().includes(filtroUID));
+                const matchCategoria = !filtroCategoria || item.categoria === filtroCategoria;
+                const matchEstado = !filtroEstado || item.estado === filtroEstado;
+                return matchUID && matchCategoria && matchEstado;
+            });
+
+            mostrarItems(itemsFiltrados);
+        }
+
+        function actualizarInventario() {
+            cargarInventario();
+            Swal.fire({
+                icon: 'success',
+                title: 'Actualizado',
+                text: 'Inventario actualizado correctamente',
+                timer: 1500,
+                showConfirmButton: false
+            });
+        }
+
+        function editarItem(uid) {
+            // Implementar modal de edición (similar a dashboard)
+            Swal.fire('Editar', `Funcionalidad de edición para ${uid}`, 'info');
+        }
+
+        async function eliminarItem(uid) {
+            const result = await Swal.fire({
+                title: '¿Estás seguro?',
+                text: `Se eliminará el ítem ${uid} permanentemente`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#dc2626',
+                cancelButtonColor: '#6b7280',
+                confirmButtonText: 'Sí, eliminar',
+                cancelButtonText: 'Cancelar'
+            });
+
+            if (result.isConfirmed) {
+                try {
+                    const response = await fetch(`/items/${uid}`, {
+                        method: 'DELETE'
+                    });
+
+                    if (response.ok) {
+                        Swal.fire('Eliminado', 'El ítem ha sido eliminado correctamente', 'success');
+                        cargarInventario();
+                    } else {
+                        Swal.fire('Error', 'No se pudo eliminar el ítem', 'error');
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    Swal.fire('Error', 'Error de conexión', 'error');
+                }
+            }
+        }
+
+        // Filtrado en tiempo real
+        document.getElementById('filtroUID').addEventListener('input', aplicarFiltros);
+        document.getElementById('filtroCategoria').addEventListener('change', aplicarFiltros);
+        document.getElementById('filtroEstado').addEventListener('change', aplicarFiltros);
+    </script>
+</body>
+
+</html>
